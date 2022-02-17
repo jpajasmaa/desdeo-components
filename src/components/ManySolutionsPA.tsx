@@ -1,5 +1,5 @@
-import React from "react";
-import './App.css'
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import './Svg.css';
 
 import { select, selectAll } from 'd3-selection';
 import {axisLeft } from 'd3-axis';
@@ -9,6 +9,9 @@ import {line} from 'd3-shape';
 import {extent} from 'd3-array';
 import {drag} from 'd3-drag';
 import {brush, brushX, brushY, brushSelection} from 'd3-brush';
+
+import { ObjectiveData } from "../types/ProblemTypes";
+import { RectDimensions } from "../types/ComponentTypes";
 
 
 const data = [
@@ -30,13 +33,49 @@ const data = [
 ] 
 
 
-// Converted to d3jsv7 from https://bl.ocks.org/jasondavies/1341281
-// Lot's of js code and bad practices still left, but it should run.
-// dragging axis does not work, there is a bug with types or something like that
-// brushing works
+interface ParallelAxesProps {
+  objectiveData: ObjectiveData;
+  oldAlternative?: ObjectiveData; // old alternative solution
+  dimensionsMaybe?: RectDimensions;
+  selectedIndices: number[];
+  handleSelection: (x: number[]) => void;
+}
+
+const defaultDimensions = {
+  chartHeight: 600,
+  chartWidth: 1000,
+  marginLeft: 50,
+  marginRight: 50,
+  marginTop: 30,
+  marginBottom: 30,
+};
 
 
-function App()  {
+const ManySolutionsPA = ({
+  objectiveData,
+  oldAlternative,
+  dimensionsMaybe,
+  selectedIndices,
+  handleSelection,
+}:ParallelAxesProps) => {
+
+  const ref = useRef(null);
+  const [selection, setSelection] = useState<null | Selection<
+    SVGSVGElement,
+    unknown,
+    null,
+    undefined
+  >>(null);
+  const [dimensions] = useState(
+    dimensionsMaybe ? dimensionsMaybe : defaultDimensions
+  );
+  const [data, SetData] = useState(objectiveData); // if changes, the whole graph is re-rendered
+
+
+  useEffect(() => {
+    SetData(objectiveData);
+  }, [objectiveData]);
+
 
 
 const svgWidth = 960,
@@ -64,7 +103,7 @@ const func = (data:any) => {
         //console.log(data.filter("6"))
 
         // Extract the list of dimensions as keys and create a y scale for each.
-        dimensions = Object.keys(data[0]).filter(function (key:any) {
+        let dimensions = Object.keys(data[0]).filter(function (key:any) {
             if (key !== "name") {
                 console.log("key", key)
                 y[key] = scaleLinear()
@@ -173,6 +212,7 @@ function transition(g:any) {
 // Take a row of the csv as input, and return x and y coordinates of the line to draw for this raw.
 const pathline = (d:any) => {
     let path =  line()(dimensions.map(function (key:any) { return [x(key), y[key](d[key])]; }));
+    //let path = line()([[10,60],[30,89]])
     return path 
 }
 
@@ -213,18 +253,15 @@ function brush() {
     }
 }
 
-
+// get from url with d3 fetch
+//const data = csv('https://gist.githubusercontent.com/noamross/e5d3e859aa0c794be10b/raw/b999fb4425b54c63cab088c0ce2c0d6ce961a563/cars.csv')
+//console.log(data)
 
 // call func
 func(data);
 
-  return (
-    <div className="App">
-
-   </div>
-    );
+  return <div ref={ref} id="container" className="svg-container"></div>;
 
 }
 
-export default App;
-
+export default ManySolutionsPA;
